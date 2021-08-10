@@ -122,7 +122,6 @@ class MirrorListener(listeners.MirrorListeners):
                 fs_utils.clean_download(download.path())
             except Exception as e:
                 LOGGER.error(str(e))
-                pass
             count = len(download_dict)
         if self.message.from_user.username:
             uname = f"@{self.message.from_user.username}"
@@ -232,10 +231,12 @@ def _mirror(bot, update, isTar=False, extract=False):
     qbitsel = False
     try:
         link = message_args[1]
-        if link == "qb" or link == "qbs":
+        if link == "qb":
             qbit = True
-            if link == "qbs":
-                qbitsel = True
+            link = message_args[2]
+        elif link == "qbs":
+            qbit = True
+            qbitsel = True
             link = message_args[2]
         print(link)
         if link.startswith("|") or link.startswith("pswd: "):
@@ -273,20 +274,23 @@ def _mirror(bot, update, isTar=False, extract=False):
                 file = i
                 break
 
-        if not bot_utils.is_url(link) and not bot_utils.is_magnet(link) or len(link) == 0:
-            if file is not None:
-                if file.mime_type != "application/x-bittorrent":
-                    listener = MirrorListener(bot, update, pswd, isTar, extract)
-                    tg_downloader = TelegramDownloadHelper(listener)
-                    ms = update.message
-                    tg_downloader.add_download(ms, f'{DOWNLOAD_DIR}{listener.uid}/', name)
-                    return
+        if (
+            not bot_utils.is_url(link)
+            and not bot_utils.is_magnet(link)
+            or len(link) == 0
+        ) and file is not None:
+            if file.mime_type != "application/x-bittorrent":
+                listener = MirrorListener(bot, update, pswd, isTar, extract)
+                tg_downloader = TelegramDownloadHelper(listener)
+                ms = update.message
+                tg_downloader.add_download(ms, f'{DOWNLOAD_DIR}{listener.uid}/', name)
+                return
+            else:
+                if qbit:
+                    file.get_file().download(custom_path=f"/usr/src/app/{file.file_name}")
+                    link = f"/usr/src/app/{file.file_name}"
                 else:
-                    if qbit:
-                        file.get_file().download(custom_path=f"/usr/src/app/{file.file_name}")
-                        link = f"/usr/src/app/{file.file_name}"
-                    else:
-                        link = file.get_file().file_path
+                    link = file.get_file().file_path
 
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
         sendMessage('No download source provided', bot, update)
@@ -314,7 +318,7 @@ def _mirror(bot, update, isTar=False, extract=False):
             sendMessage(res, bot, update)
             return
         if TAR_UNZIP_LIMIT is not None:
-            LOGGER.info(f'Checking File/Folder Size')
+            LOGGER.info('Checking File/Folder Size')
             limit = TAR_UNZIP_LIMIT
             limit = limit.split(' ', maxsplit=1)
             limitint = int(limit[0])

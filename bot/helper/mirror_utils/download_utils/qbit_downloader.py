@@ -171,11 +171,11 @@ def get_hash_magnet(mgt):
 
     qs = parse_qs(query)
     v = qs.get('xt', None)
-    
-    if v == None or v == []:
+
+    if v is None or v == []:
         LOGGER.error('Invalid magnet URI: no "xt" query parameter.')
         return False
-        
+
     v = v[0]
     if not v.startswith('urn:btih:'):
         LOGGER.error('Invalid magnet URI: "xt" value not valid for BitTorrent.')
